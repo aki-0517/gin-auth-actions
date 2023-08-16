@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  db:
+    env_file: .env
+    image: postgres:14.0-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PORT: ${DB_PORT}
+    ports:
+      - ${DB_PORT}:${DB_PORT}
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+
+
+  redis:
+    image: redis:6.2-alpine
+    env_file: .env
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    restart: always
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+
+  api:
+    env_file: .env
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    tty: true
+    volumes:
+      - ./api:/app
+      - ./wait-for-it.sh:/app/wait-for-it.sh
+      - ./api-test.sh:/app/api-test.sh
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+      - redis
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
+

@@ -1,0 +1,61 @@
+name: Go Test
+
+on: 
+  push:
+    branches:
+      - main  # mainブランチにプッシュされたときにテストを実行します
+  pull_request:
+    branches:
+      - main  # mainブランチへのプルリクエストが作成されたときにテストを実行します
+
+jobs:
+  build:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+        db:
+          image: postgres:13
+          env:
+            POSTGRES_PASSWORD: password
+            POSTGRES_USER: postgres
+            POSTGRES_DB: postgres
+          ports:
+            - 5432:5432
+        redis:
+          image: redis
+          ports:
+            - 6379:6379
+
+    steps:
+        - name: List directory contents
+          run: |
+                pwd
+                ls -a ./
+                ls -a ../
+        - name: Check Go Environment
+          run: go env
+        - name: Checkout code
+          uses: actions/checkout@v3
+
+        - name: Set up Go
+          uses: actions/setup-go@v3
+          with:
+            go-version: '>=1.19.0'
+
+        - name: Install dependencies
+          run: |
+            cd api
+            go mod download
+
+        - name: Build
+          run: |
+            cd api
+            go build -v ./...
+
+        - name: Test with the Go CLI
+          run: |
+            cd api
+            go test -v ./...
+
+    
